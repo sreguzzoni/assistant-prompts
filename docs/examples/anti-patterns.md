@@ -4,7 +4,7 @@
 
 ```
 bad-terraform-project/
-├── modules/                    # Wrong: should be .modules/
+├── .modules/                   # Wrong: should be modules/
 ├── development/                # Wrong: should be dev/
 ├── production/                 # Wrong: should be prod/
 ├── test/                       # Wrong: should be staging/
@@ -14,15 +14,15 @@ bad-terraform-project/
 ## ❌ Bad Module Structure
 
 ```
-.modules/
-├── vpc/
-│   ├── vpc.tf                  # Wrong: should be main.tf
+modules/
+├── application-load-balancer/
+│   ├── alb.tf                  # Wrong: should be main.tf
 │   ├── variables.tf
 │   └── outputs.tf
-├── ec2/
+├── ecs/
 │   ├── main.tf
 │   └── variables.tf            # Missing: outputs.tf
-└── rds/
+└── dynamodb/
     └── main.tf                 # Missing: variables.tf and outputs.tf
 ```
 
@@ -33,6 +33,7 @@ dev/
 ├── main.tf
 ├── variables.tf                # Wrong: should be locals.tf
 ├── outputs.tf                  # Wrong: should not be in environment
+├── providers.tf                # Wrong: should be provider.tf
 └── terraform.tfvars            # Wrong: should use locals.tf instead
 ```
 
@@ -40,17 +41,23 @@ dev/
 
 ```hcl
 # Bad: No module separation comments
-resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
+resource "aws_lb" "main" {
+  name               = "my-lb"
+  load_balancer_type = "application"
+  subnets            = var.subnet_ids
 }
 
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
+resource "aws_alb_target_group" "main" {
+  name     = "my-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = var.vpc_id
 }
 
-resource "aws_subnet" "public" {
-  vpc_id     = aws_vpc.main.id
-  cidr_block = "10.0.1.0/24"
+resource "aws_security_group" "main" {
+  name        = "my-sg"
+  description = "Security group"
+  vpc_id      = var.vpc_id
 }
 
 # Bad: Inconsistent naming
@@ -82,7 +89,13 @@ variable "count" {
 variable "region" {
   description = "AWS region"
   type        = string
-  default     = "us-west-2"
+  default     = "eu-west-1"
+}
+
+# Bad: No module prefix for module-specific variables
+variable "subnet_ids" {
+  description = "Subnet IDs"
+  type        = list(string)
 }
 ```
 
@@ -90,9 +103,10 @@ variable "region" {
 
 ```hcl
 # Bad: No tags, hardcoded values
-resource "aws_instance" "web" {
-  ami           = "ami-12345678"
-  instance_type = "t3.micro"
+resource "aws_lb" "main" {
+  name               = "my-lb"
+  load_balancer_type = "application"
+  subnets            = ["subnet-123", "subnet-456"]
 }
 
 # Bad: Inconsistent naming
@@ -109,35 +123,47 @@ resource "aws_security_group_rule" "allow_http" {
   cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.sg.id
 }
+
+# Bad: No health check configuration
+resource "aws_alb_target_group" "main" {
+  name     = "my-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = "vpc-123"
+}
 ```
 
 ## ❌ Bad Module Usage
 
 ```hcl
 # Bad: No source path
-module "vpc" {
+module "application_load_balancer" {
   # Missing source
-  vpc_cidr = "10.0.0.0/16"
+  name = "my-project"
+  env  = "dev"
 }
 
 # Bad: Hardcoded values instead of variables
-module "ec2" {
-  source = "../.modules/ec2"
+module "ecs" {
+  source = "../modules/ecs"
   
-  instance_count = 2
-  instance_type   = "t3.medium"
+  name = "my-project"
+  env  = "dev"
+  ecs_task_cpu    = 512
+  ecs_task_memory = 2048
 }
 
 # Bad: No outputs usage
-module "vpc" {
-  source = "../.modules/vpc"
+module "application_load_balancer" {
+  source = "../modules/application-load-balancer"
   
-  vpc_cidr = var.vpc_cidr
+  name = var.name
+  env  = var.env
 }
 
 # Then using hardcoded values instead of module outputs
-resource "aws_subnet" "public" {
-  vpc_id = "vpc-12345678"  # Should use module.vpc.vpc_id
+resource "aws_alb_listener" "http" {
+  load_balancer_arn = "arn:aws:elasticloadbalancing:..."  # Should use module.application_load_balancer.aws_alb_arn
 }
 ```
 
@@ -151,26 +177,36 @@ terraform {
 }
 
 provider "aws" {
-  region = "us-west-2"
+  region = "eu-west-1"
 }
 
-resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
+resource "aws_lb" "main" {
+  name               = "my-lb"
+  load_balancer_type = "application"
+  subnets            = ["subnet-123", "subnet-456"]
 }
 
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
+resource "aws_alb_target_group" "main" {
+  name     = "my-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = "vpc-123"
 }
 
-resource "aws_subnet" "public" {
-  vpc_id     = aws_vpc.main.id
-  cidr_block = "10.0.1.0/24"
+resource "aws_security_group" "main" {
+  name        = "my-sg"
+  description = "Security group"
+  vpc_id      = "vpc-123"
 }
 
-resource "aws_instance" "web" {
-  ami           = "ami-12345678"
-  instance_type = "t3.micro"
-  subnet_id     = aws_subnet.public.id
+resource "aws_alb_listener" "http" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = 80
+  protocol          = "HTTP"
+  default_action {
+    target_group_arn = aws_alb_target_group.main.arn
+    type             = "forward"
+  }
 }
 
 # Bad: No separation of concerns
@@ -195,6 +231,17 @@ terraform {
     # Missing: region, encrypt, dynamodb_table
   }
 }
+
+# Bad: Hardcoded backend values
+terraform {
+  backend "s3" {
+    bucket         = "infra.dev.example"
+    key            = "terraform/dev/my-project/terraform.tfstate"
+    region         = "eu-west-1"
+    dynamodb_table = "terraform_locks"
+    encrypt        = true
+  }
+}
 ```
 
 ## ❌ Bad Version Management
@@ -212,7 +259,17 @@ terraform {
 
 # Bad: No provider version constraints
 provider "aws" {
-  region = "us-west-2"
+  region = "eu-west-1"
+}
+
+# Bad: Too specific provider versions
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "= 5.95.0"  # Should be ~> 5.95.0
+    }
+  }
 }
 ```
 

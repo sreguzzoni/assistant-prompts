@@ -1,12 +1,24 @@
 # Terraform Infrastructure Coding Standards
 
+## 🚨 **CRITICAL REQUIREMENTS FOR AI ASSISTANTS**
+
+**MANDATORY PATTERNS TO ENFORCE:**
+- Repository structure: `modules/`, `dev/`, `staging/`, `prod/`, `bin/`
+- Module files: `variables.tf`, `main.tf`, `outputs.tf` (ALL REQUIRED)
+- Environment files: `main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`, `variables.tf`, `outputs.tf` (ALL REQUIRED)
+- Comment format: `#############################################` for module separation
+- Resource naming: `"${var.name}-${var.env}-${resource_type}"`
+- Variable naming: Module prefixes (e.g., `alb_`, `ecs_`, `dynamodb_`)
+- Locals structure: `common` + module-specific sections
+- Minimum tags: `Name`, `Environment`, `Project`
+
 ## Repository Structure Requirements
 
 Every Terraform repository MUST follow this exact structure:
 
 ```
 repository/
-├── .modules/           # Required: Custom Terraform modules
+├── modules/           # Required: Custom Terraform modules
 ├── dev/               # Required: Development environment
 ├── staging/           # Required: Staging environment  
 ├── prod/              # Required: Production environment
@@ -27,16 +39,16 @@ Each Terraform module folder MUST contain these three files:
 
 ### Module File Structure Example
 ```
-.modules/
-├── vpc/
+modules/
+├── application-load-balancer/
 │   ├── variables.tf
 │   ├── main.tf
 │   └── outputs.tf
-├── ec2/
+├── ecs/
 │   ├── variables.tf
 │   ├── main.tf
 │   └── outputs.tf
-└── rds/
+└── dynamodb/
     ├── variables.tf
     ├── main.tf
     └── outputs.tf
@@ -49,18 +61,22 @@ Each environment folder (dev, staging, prod) MUST contain these five files:
 ### Required Environment Files
 - `main.tf` - Main configuration and module calls
 - `locals.tf` - Local values and computed variables
-- `providers.tf` - Provider configurations
+- `provider.tf` - Provider configurations
 - `versions.tf` - Terraform and provider version constraints
 - `state.tf` - Backend configuration for state management
+- `variables.tf` - Environment variables
+- `outputs.tf` - Output values
 
 ### Environment File Structure Example
 ```
 dev/
 ├── main.tf
 ├── locals.tf
-├── providers.tf
+├── provider.tf
 ├── versions.tf
-└── state.tf
+├── state.tf
+├── variables.tf
+└── outputs.tf
 ```
 
 ## Terraform File Formatting Rules
@@ -70,61 +86,47 @@ Every Terraform file MUST use `#` comments to separate different modules or logi
 
 ### Example File Structure with Comments
 ```hcl
-##################################################################
-# VPC Module
+#############################################
+# Common
 #
-resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_hostnames = true
-  enable_dns_support   = true
-
-  tags = {
-    Name        = "${var.name}-${var.env}-vpc"
-    Environment = var.env
-    Project     = var.name
-    Account     = var.common_account
-    ManagedBy   = "terraform"
-  }
+variable "name" {
+  description = "Name of the project"
+  type        = string
 }
-##################################################################
 
-##################################################################
-# Internet Gateway Module  
+variable "env" {
+  description = "Name of the environment"
+  type        = string
+}
+#############################################
+
+#############################################
+# Application Load Balancer Module
 #
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
-
-  tags = {
-    Name        = "${var.name}-${var.env}-igw"
-    Environment = var.env
-    Project     = var.name
-    Account     = var.common_account
-    ManagedBy   = "terraform"
-  }
+variable "alb_subnet_ids" {
+  description = "Subnet IDS related to the application load balancer"
+  type        = list(string)
 }
-##################################################################
 
-##################################################################
-# Subnets Module
+variable "alb_health_check_path" {
+  description = "Path to the health endpoint for the target group"
+  type        = string
+}
+#############################################
+
+#############################################
+# ECS Module
 #
-resource "aws_subnet" "public" {
-  count = length(var.availability_zones)
-
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.public_subnet_cidrs[count.index]
-  availability_zone       = var.availability_zones[count.index]
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name        = "${var.name}-${var.env}-public-subnet-${count.index + 1}"
-    Environment = var.env
-    Project     = var.name
-    Account     = var.common_account
-    Type        = "public"
-    ManagedBy   = "terraform"
-  }
+variable "ecs_task_cpu" {
+  description = "ECS task CPU amount in milli vCPUs"
+  type        = number
 }
-##################################################################
+
+variable "ecs_task_memory" {
+  description = "ECS task memory amount in MiB"
+  type        = number
+}
+#############################################
 ```
 
 ## File Naming Conventions
@@ -250,50 +252,66 @@ variable "common_aws_region" {
 All Terraform files MUST use this exact comment format for module separation:
 
 ```hcl
-##################################################################
+#############################################
 # Module Name
 # 
 resource "aws_resource" "name" {
   # Resource configuration
 }
-##################################################################
+#############################################
 ```
 
 ### Example Implementation
 ```hcl
-##################################################################
-# VPC Module
+#############################################
+# Application Load Balancer Module
 # 
-resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_hostnames = true
-  enable_dns_support   = true
+resource "aws_lb" "main" {
+  name               = "${var.name}-${var.env}-lb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.main.id]
+  subnets            = var.alb_subnet_ids
+
+  enable_deletion_protection = false
+  idle_timeout               = 600
 
   tags = {
-    Name        = "${var.name}-${var.env}-vpc"
+    Name        = "${var.name}-${var.env}-lb"
     Environment = var.env
     Project     = var.name
-    Account     = var.common_account
-    ManagedBy   = "terraform"
   }
 }
-##################################################################
+#############################################
 
-##################################################################
-# Internet Gateway Module
+#############################################
+# Target Group Module
 # 
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
+resource "aws_alb_target_group" "main" {
+  name     = "${var.name}-${var.env}-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = var.vpc_id
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    interval            = 30
+    matcher             = "200"
+    path                = var.alb_health_check_path
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    timeout             = 5
+    unhealthy_threshold = 2
+  }
 
   tags = {
-    Name        = "${var.name}-${var.env}-igw"
+    Name        = "${var.name}-${var.env}-tg"
     Environment = var.env
     Project     = var.name
-    Account     = var.common_account
-    ManagedBy   = "terraform"
   }
 }
-##################################################################
+#############################################
 ```
 
 ## Tagging Requirements
@@ -301,9 +319,9 @@ resource "aws_internet_gateway" "main" {
 ### Mandatory Tags
 ALL resources that support tagging MUST include these minimum tags:
 
-- `project` - Project name
-- `account` - Account identifier
-- `env` - Environment name
+- `Name` - Resource name following naming convention
+- `Environment` - Environment name
+- `Project` - Project name
 
 ### Tagging Example
 ```hcl
@@ -311,15 +329,13 @@ tags = {
   Name        = "${var.name}-${var.env}-resource-type"
   Environment = var.env
   Project     = var.name
-  Account     = var.common_account
-  ManagedBy   = "terraform"
 }
 ```
 
 ## Bin Scripts Requirements
 
 ### Required Bin Files
-Each repository MUST have these two bin files:
+Each repository MUST have these bin files:
 
 - bin/plan
 - bin/apply
@@ -340,10 +356,10 @@ bin/plan prod
 
 Before committing any Terraform code, ensure:
 
-- [ ] Repository has `.modules/`, `dev/`, `staging/`, `prod/` folders
+- [ ] Repository has `modules/`, `dev/`, `staging/`, `prod/` folders
 - [ ] Repository has `bin/plan` and `bin/apply` scripts
 - [ ] Each module has `variables.tf`, `main.tf`, `outputs.tf`
-- [ ] Each environment has `main.tf`, `locals.tf`, `providers.tf`, `versions.tf`, `state.tf`
-- [ ] All `.tf` files use `##################################################################` comments to separate modules
+- [ ] Each environment has `main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`, `variables.tf`, `outputs.tf`
+- [ ] All `.tf` files use `#############################################` comments to separate modules
 - [ ] Resource names follow naming conventions
 - [ ] All files pass `terraform fmt` and `terraform validate`

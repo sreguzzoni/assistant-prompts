@@ -8,7 +8,7 @@
 
 ```
 terraform-repository/
-├── .modules/          # Custom modules directory
+├── modules/          # Custom modules directory
 ├── dev/              # Development environment
 ├── staging/          # Staging environment
 ├── prod/             # Production environment
@@ -20,7 +20,7 @@ terraform-repository/
 
 ### 2. Module File Requirements
 
-Each module in `.modules/` directory MUST have:
+Each module in `modules/` directory MUST have:
 
 ```hcl
 # variables.tf - Input variables
@@ -48,118 +48,168 @@ Each environment folder (dev/staging/prod) MUST have:
 
 #### main.tf
 ```hcl
-##################################################################
-# Main Configuration
-# 
-terraform {
-  required_version = ">= 1.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
-##################################################################
+module "modules" {
+  source = "../modules"
 
-##################################################################
-# Module Calls
-# 
-module "vpc" {
-  source = "../.modules/vpc"
-  
-  # Resource naming variables
-  name = local.common.project
-  env  = local.common.env
-  
-  # Module-specific variables
-  vpc_cidr        = local.vpc.cidr_block
-  vpc_enable_dns  = local.vpc.enable_dns
-  vpc_availability_zones = local.vpc.availability_zones
-  
-  # Common variables
-  common_project_name = local.common.project
-  common_environment  = local.common.env
-  common_account      = local.common.account
+  name                = local.common.name
+  env                 = local.common.env
+  aws_root_account_id = local.common.aws_root_account_id
+  aws_region          = local.common.aws_region
+  vpc_id              = local.common.vpc_id
+  igw_id              = local.common.igw_id
+  nat_id              = local.common.nat_id
+
+  alb_health_check_path = local.application_load_balancer.alb_health_check_path
+
+  cloudfront_aliases             = local.cloudfront.cloudfront_aliases
+  cloudfront_enable_acm_creation = local.cloudfront.cloudfront_enable_acm_creation
+  cloudfront_certificate_arn     = local.cloudfront.cloudfront_certificate_arn
+  cloudfront_hosted_zone         = local.cloudfront.cloudfront_hosted_zone
+
+  ecr_repository_lifecycle_count_threshold = local.ecr.ecr_repository_lifecycle_count_threshold
+
+  ecs_task_container_definitions = local.ecs.ecs_task_container_definitions
+  ecs_task_cpu                   = local.ecs.ecs_task_cpu
+  ecs_task_memory                = local.ecs.ecs_task_memory
+  ecs_desired_capacity           = local.ecs.ecs_desired_capacity
+  ecs_max_capacity               = local.ecs.ecs_max_capacity
+  ecs_min_capacity               = local.ecs.ecs_min_capacity
+  ecs_task_log_group_region      = local.ecs.ecs_task_log_group_region
+  ecs_task_log_group_name        = local.ecs.ecs_task_log_group_name
+
+  iam_gitlab_ci_root_role = local.iam.iam_gitlab_ci_root_role
+
+  rt_vpc_s3_endpoint_id = local.route_table.rt_vpc_s3_endpoint_id
+
+  subnet_availability_zones = local.subnet.subnet_availability_zones
+  subnet_public_subnets     = local.subnet.subnet_public_subnets
+  subnet_private_subnets    = local.subnet.subnet_private_subnets
+
+  dynamodb_deletion_protection_enabled   = local.dynamodb.dynamodb_deletion_protection_enabled
+  dynamodb_enable_point_in_time_recovery = local.dynamodb.dynamodb_enable_point_in_time_recovery
 }
-##################################################################
 ```
 
 #### locals.tf
 ```hcl
-##################################################################
-# Local Values
-# 
 locals {
   common = {
-    project = "my-project-name"
-    env     = "development"
-    account = "123456789012"
+    name                = "my-project-name"
+    env                 = "dev"
+    aws_root_account_id = "564989531723"
+    aws_account_id      = "990845929947"
+    aws_region          = "eu-west-1"
+    vpc_id              = "vpc-006c63b1626b611cf"
+    igw_id              = "igw-0bb50c8e681523ae2"
+    nat_id              = "nat-0641602821bcc70cc"
   }
 
-  vpc = {
-    cidr_block        = "10.0.0.0/16"
-    enable_dns        = true
-    availability_zones = ["us-west-2a", "us-west-2b"]
+  application_load_balancer = {
+    alb_health_check_path = "/health"
   }
 
-  ec2 = {
-    instance_type  = "t3.micro"
-    instance_count = 1
-    ami_id         = "ami-12345678"
+  cloudfront = {
+    cloudfront_aliases = [
+      "my-project.${local.common.env}.example.com",
+    ]
+    cloudfront_enable_acm_creation = true
+    cloudfront_certificate_arn     = ""
+    cloudfront_hosted_zone         = "my-project.${local.common.env}.example.com"
+  }
+
+  dynamodb = {
+    dynamodb_deletion_protection_enabled   = true
+    dynamodb_enable_point_in_time_recovery = false
+  }
+
+  ecr = {
+    ecr_repository_lifecycle_count_threshold = 10
+  }
+
+  ecs = {
+    ecs_task_container_definitions = jsonencode([
+      {
+        name        = "${local.common.name}-${local.common.env}-application"
+        image       = "${local.common.aws_account_id}.dkr.ecr.eu-west-1.amazonaws.com/${local.common.name}-${local.common.env}-application-repository:latest"
+        essential   = true
+        networkMode = "awsvpc"
+        logConfiguration = {
+          logDriver = "awslogs"
+          options = {
+            awslogs-create-group  = "True"
+            awslogs-group         = "${local.common.name}/${local.common.env}"
+            awslogs-region        = local.common.aws_region
+            awslogs-stream-prefix = "application"
+          }
+        }
+      }
+    ])
+    ecs_task_cpu              = 512
+    ecs_task_memory           = 2048
+    ecs_desired_capacity      = 1
+    ecs_max_capacity          = 1
+    ecs_min_capacity          = 1
+    ecs_task_log_group_region = local.common.aws_region
+    ecs_task_log_group_name   = "${local.common.name}/${local.common.env}"
+  }
+
+  iam = {
+    iam_gitlab_ci_root_role = "gitlab-ci"
+  }
+
+  route_table = {
+    rt_vpc_s3_endpoint_id = "vpce-0c46b1c93f61f445b"
+  }
+
+  subnet = {
+    subnet_availability_zones = [
+      "eu-west-1a",
+      "eu-west-1b",
+    ]
+    subnet_public_subnets = [
+      "10.46.132.0/27",
+      "10.46.132.32/27",
+    ]
+    subnet_private_subnets = [
+      "10.46.132.128/27",
+      "10.46.132.160/27",
+    ]
   }
 }
-##################################################################
 ```
 
-#### providers.tf
+#### provider.tf
 ```hcl
-##################################################################
-# Provider Configuration
-# 
 provider "aws" {
-  region = var.aws_region
-  
-  default_tags {
-    tags = local.common_tags
-  }
+  region = local.common.aws_region
 }
-##################################################################
 ```
 
 #### versions.tf
 ```hcl
-##################################################################
-# Version Constraints
-# 
 terraform {
-  required_version = ">= 1.0"
-  
+  required_version = ">= 1.0.4"
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "5.95.0"
     }
   }
 }
-##################################################################
 ```
 
 #### state.tf
 ```hcl
-##################################################################
-# Backend Configuration
-# 
 terraform {
   backend "s3" {
-    bucket         = "terraform-state-bucket"
-    key            = "environments/${var.environment}/terraform.tfstate"
-    region         = "us-west-2"
+    bucket         = "infra.dev.example"
+    key            = "terraform/dev/my-project/terraform.tfstate"
+    region         = "eu-west-1"
+    dynamodb_table = "terraform_locks"
     encrypt        = true
-    dynamodb_table = "terraform-locks"
   }
 }
-##################################################################
 ```
 
 ## Comment Standards
@@ -168,68 +218,92 @@ terraform {
 Use this exact format for separating modules in Terraform files:
 
 ```hcl
-##################################################################
+#############################################
 # Module Name
 # 
 ```
 
 ### Example Implementation
 ```hcl
-##################################################################
-# VPC Module
+#############################################
+# Application Load Balancer Module
 # 
-resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_hostnames = true
-  enable_dns_support   = true
+resource "aws_lb" "main" {
+  name               = "${var.name}-${var.env}-lb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.main.id]
+  subnets            = var.alb_subnet_ids
+
+  enable_deletion_protection = false
+  idle_timeout               = 600
 
   tags = {
-    Name        = "${var.name}-${var.env}-vpc"
+    Name        = "${var.name}-${var.env}-lb"
     Environment = var.env
     Project     = var.name
-    Account     = var.common_account
-    ManagedBy   = "terraform"
   }
 }
-##################################################################
+#############################################
 
-##################################################################
-# Internet Gateway Module
+#############################################
+# Target Group Module
 # 
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
+resource "aws_alb_target_group" "main" {
+  name     = "${var.name}-${var.env}-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = var.vpc_id
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    interval            = 30
+    matcher             = "200"
+    path                = var.alb_health_check_path
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    timeout             = 5
+    unhealthy_threshold = 2
+  }
 
   tags = {
-    Name        = "${var.name}-${var.env}-igw"
+    Name        = "${var.name}-${var.env}-tg"
     Environment = var.env
     Project     = var.name
-    Account     = var.common_account
-    ManagedBy   = "terraform"
   }
 }
-##################################################################
+#############################################
 
-##################################################################
-# Subnets Module
+#############################################
+# Security Group Module
 # 
-resource "aws_subnet" "public" {
-  count = length(var.availability_zones)
+resource "aws_security_group" "main" {
+  name        = "${var.name}-${var.env}-sg"
+  description = "Security group for application load balancer"
+  vpc_id      = var.vpc_id
 
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.public_subnet_cidrs[count.index]
-  availability_zone       = var.availability_zones[count.index]
-  map_public_ip_on_launch = true
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
   tags = {
-    Name        = "${var.name}-${var.env}-public-subnet-${count.index + 1}"
+    Name        = "${var.name}-${var.env}-sg"
     Environment = var.env
     Project     = var.name
-    Account     = var.common_account
-    Type        = "public"
-    ManagedBy   = "terraform"
   }
 }
-##################################################################
+#############################################
 ```
 
 ## Execution Scripts
@@ -266,13 +340,13 @@ bin/apply dev
 
 Use this checklist for every repository:
 
-- [ ] `.modules/` directory exists
+- [ ] `modules/` directory exists
 - [ ] `dev/` directory exists with required files
 - [ ] `staging/` directory exists with required files  
 - [ ] `prod/` directory exists with required files
 - [ ] `bin/` directory exists with `plan` and `apply` scripts
 - [ ] Each module has `variables.tf`, `main.tf`, `outputs.tf`
-- [ ] Each environment has `main.tf`, `locals.tf`, `providers.tf`, `versions.tf`, `state.tf`
+- [ ] Each environment has `main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`, `variables.tf`, `outputs.tf`
 - [ ] All `.tf` files use module separation comments
 - [ ] Bin scripts are executable (`chmod +x bin/plan bin/apply`)
 - [ ] Code passes `terraform fmt` and `terraform validate`

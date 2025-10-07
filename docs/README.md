@@ -1,6 +1,16 @@
 # Terraform Infrastructure Documentation
 
-This documentation provides comprehensive standards and guidelines for Terraform infrastructure projects.
+This documentation provides comprehensive standards and guidelines for Terraform infrastructure projects following a specific organizational pattern with modules, environments, and standardized file structures.
+
+## 🎯 **For Cursor Assistant Usage**
+
+This documentation is designed to help Cursor assistants understand and enforce Terraform coding standards. Key patterns to follow:
+
+- **Repository Structure**: Always use `modules/`, `dev/`, `staging/`, `prod/`, and `bin/` folders
+- **File Requirements**: Each module needs `variables.tf`, `main.tf`, `outputs.tf`
+- **Comment Format**: Use `#############################################` for module separation
+- **Naming Convention**: Resources follow `"${var.name}-${var.env}-${resource_type}"` pattern
+- **Locals Structure**: Organize with `common` + module-specific sections
 
 ## 📁 Documentation Structure
 
@@ -17,7 +27,7 @@ docs/
 ## 🎯 Quick Reference
 
 ### Repository Structure Requirements
-- ✅ `.modules/` folder for custom modules
+- ✅ `modules/` folder for custom modules
 - ✅ `dev/` folder for development environment
 - ✅ `staging/` folder for staging environment  
 - ✅ `prod/` folder for production environment
@@ -31,19 +41,22 @@ Each module must have:
 
 ### Environment Requirements
 Each environment must have:
-- ✅ `main.tf` - Main configuration
-- ✅ `locals.tf` - Local values
-- ✅ `providers.tf` - Provider configuration
+- ✅ `main.tf` - Main configuration and module calls
+- ✅ `locals.tf` - Local values and computed variables
+- ✅ `provider.tf` - Provider configuration
 - ✅ `versions.tf` - Version constraints
 - ✅ `state.tf` - Backend configuration
+- ✅ `variables.tf` - Environment variables
+- ✅ `outputs.tf` - Output values
 
 ### File Formatting Requirements
-- ✅ Use `##################################################################` comments to separate modules
+- ✅ Use `#############################################` comments to separate modules
 - ✅ Follow consistent naming conventions
 - ✅ Include proper tagging strategy
 - ✅ Resource naming pattern: `"${var.name}-${var.env}-${resource_type}"`
 - ✅ Variable naming: module prefixes + common variables
 - ✅ Locals structure: common + module-specific sections
+- ✅ Use descriptive variable names with module prefixes
 
 ### Execution Requirements
 - ✅ `bin/plan` script for formatting and planning
@@ -88,6 +101,15 @@ Common mistakes to avoid:
 3. **Avoid Anti-Patterns**: Review `anti-patterns.md` to understand what NOT to do
 4. **Follow Validation**: Use the provided checklists to validate your code
 
+## 🤖 **For AI Assistants**
+
+When working with Terraform code, always:
+- **Enforce Structure**: Ensure proper folder structure and file requirements
+- **Check Comments**: Verify `#############################################` module separation
+- **Validate Naming**: Ensure resources follow naming conventions
+- **Review Tags**: Confirm minimum tags (Name, Environment, Project)
+- **Use Checklists**: Reference validation checklists before suggesting changes
+
 ## 🔍 Validation Commands
 
 ### Using Bin Scripts (Recommended)
@@ -122,15 +144,15 @@ terraform apply
 
 Before committing any Terraform code:
 
-- [ ] Repository has required folder structure (`.modules/`, `dev/`, `staging/`, `prod/`, `bin/`)
+- [ ] Repository has required folder structure (`modules/`, `dev/`, `staging/`, `prod/`)
 - [ ] Bin scripts exist (`bin/plan`, `bin/apply`) and are executable
 - [ ] All modules have required files (`variables.tf`, `main.tf`, `outputs.tf`)
-- [ ] All environments have required files (`main.tf`, `locals.tf`, `providers.tf`, `versions.tf`, `state.tf`)
-- [ ] Files use `##################################################################` module separation comments
+- [ ] All environments have required files (`main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`, `variables.tf`, `outputs.tf`)
+- [ ] Files use `#############################################` module separation comments
 - [ ] Resource naming follows pattern: `"${var.name}-${var.env}-${resource_type}"`
 - [ ] Variables use proper naming (module prefixes + common variables)
 - [ ] Locals structure follows common + module-specific format
-- [ ] All resources have minimum tags: project, account, env
+- [ ] All resources have minimum tags: Name, Environment, Project
 - [ ] Code passes `terraform fmt` and `terraform validate`
 
 ## 🤝 Contributing
