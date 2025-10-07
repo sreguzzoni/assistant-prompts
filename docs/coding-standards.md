@@ -3,7 +3,7 @@
 ## 🚨 **CRITICAL REQUIREMENTS FOR AI ASSISTANTS**
 
 **MANDATORY PATTERNS TO ENFORCE:**
-- Repository structure: `modules/`, `dev/`, `staging/`, `prod/`, `bin/`
+- Repository structure: `modules/`, `dev/`, `staging/`, `prod/`
 - Module files: `variables.tf`, `main.tf`, `outputs.tf` (ALL REQUIRED)
 - Environment files: `main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf` (ALL REQUIRED)
 - Comment format: `#############################################` blocks with proper structure
@@ -22,25 +22,29 @@ repository/
 ├── dev/               # Required: Development environment
 ├── staging/           # Required: Staging environment  
 ├── prod/              # Required: Production environment
-├── bin/               # Required: Execution scripts
-│   ├── plan           # Required: Terraform plan script
-│   └── apply          # Required: Terraform apply script
 └── README.md
 ```
 
 ## Module Structure Requirements
 
-Each Terraform module folder MUST contain these three files:
+### Module Creation Rules
+- **One module per service**: Create separate modules for each AWS service (cloudfront, route53, ecs, etc.)
+- **Main resources only**: Each module should contain only the main resources for that service
+- **Multiple resources**: If a service has multiple main resources, create separate `.tf` files with descriptive names
 
 ### Required Module Files
 - `variables.tf` - Input variables for the module
-- `main.tf` - Main resource definitions
+- `main.tf` - Main resource definitions (ONLY if single main resource)
 - `outputs.tf` - Output values from the module
 
 ### Module File Structure Example
 ```
 modules/
-├── application-load-balancer/
+├── cloudfront/
+│   ├── variables.tf
+│   ├── main.tf
+│   └── outputs.tf
+├── route53/
 │   ├── variables.tf
 │   ├── main.tf
 │   └── outputs.tf
@@ -52,6 +56,21 @@ modules/
     ├── variables.tf
     ├── main.tf
     └── outputs.tf
+```
+
+### Multiple Resources Example
+```
+modules/
+├── cloudfront/
+│   ├── variables.tf
+│   ├── distribution.tf
+│   ├── origin-access-control.tf
+│   └── outputs.tf
+├── route53/
+│   ├── variables.tf
+│   ├── zone.tf
+│   ├── record.tf
+│   └── outputs.tf
 ```
 
 ## Environment Structure Requirements
@@ -363,30 +382,16 @@ tags = {
 
 ## Bin Scripts Requirements
 
-### Required Bin Files
-Each repository MUST have these bin files:
-
-- bin/plan
-- bin/apply
-
-### Usage Examples
-```bash
-# Format and plan development environment
-bin/plan dev
-
-# Format and apply staging environment
-bin/apply staging
-
-# Format and plan production environment
-bin/plan prod
-```
+### Bin Scripts
+- **DO NOT CREATE**: `bin/plan` and `bin/apply` scripts are already provided
+- **DO NOT MODIFY**: Existing bin scripts should not be altered
+- **USAGE**: Use existing scripts for terraform operations
 
 ## Validation Checklist
 
 Before committing any Terraform code, ensure:
 
 - [ ] Repository has `modules/`, `dev/`, `staging/`, `prod/` folders
-- [ ] Repository has `bin/plan` and `bin/apply` scripts
 - [ ] Each module has `variables.tf`, `main.tf`, `outputs.tf`
 - [ ] Each environment has `main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`
 - [ ] All `.tf` files use `#############################################` comments to separate modules

@@ -31,13 +31,12 @@ docs/
 - ✅ `dev/` folder for development environment
 - ✅ `staging/` folder for staging environment  
 - ✅ `prod/` folder for production environment
-- ✅ `bin/` folder with `plan` and `apply` scripts
 
 ### Module Requirements
-Each module must have:
-- ✅ `variables.tf` - Input variables
-- ✅ `main.tf` - Resource definitions
-- ✅ `outputs.tf` - Output values
+- ✅ **One module per service**: Create separate modules for each AWS service (cloudfront, route53, ecs, etc.)
+- ✅ **Main resources only**: Each module should contain only the main resources for that service
+- ✅ **Multiple resources**: If a service has multiple main resources, create separate `.tf` files with descriptive names
+- ✅ **Required files**: `variables.tf`, `main.tf` (only if single main resource), `outputs.tf`
 
 ### Environment Requirements
 Each environment must have:
@@ -57,8 +56,7 @@ Each environment must have:
 - ✅ Use descriptive variable names with module prefixes
 
 ### Execution Requirements
-- ✅ `bin/plan` script for formatting and planning
-- ✅ `bin/apply` script for formatting and applying
+- ✅ Use existing `bin/plan` and `bin/apply` scripts (DO NOT CREATE)
 - ✅ Usage: `bin/plan $ENV` and `bin/apply $ENV`
 
 ## 📖 Documentation Files
@@ -143,7 +141,6 @@ terraform apply
 Before committing any Terraform code:
 
 - [ ] Repository has required folder structure (`modules/`, `dev/`, `staging/`, `prod/`)
-- [ ] Bin scripts exist (`bin/plan`, `bin/apply`) and are executable
 - [ ] All modules have required files (`variables.tf`, `main.tf`, `outputs.tf`)
 - [ ] All environments have required files (`main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`)
 - [ ] Files use `#############################################` module separation comments
