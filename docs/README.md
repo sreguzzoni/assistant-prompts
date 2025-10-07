@@ -38,6 +38,12 @@ docs/
 - ✅ **Multiple resources**: If a service has multiple main resources, create separate `.tf` files with descriptive names
 - ✅ **Required files**: `variables.tf`, `main.tf` (only if single main resource), `outputs.tf`
 
+### README.md Requirements
+- ✅ **Project info only**: Brief description of what the project does
+- ✅ **Requirements**: Prerequisites and dependencies needed
+- ✅ **Usage instructions**: How to plan and apply the infrastructure
+- ❌ **NO technical docs**: No standards, architecture, or detailed documentation
+
 ### Environment Requirements
 Each environment must have:
 - ✅ `main.tf` - Main configuration and module calls
@@ -141,6 +147,7 @@ terraform apply
 Before committing any Terraform code:
 
 - [ ] Repository has required folder structure (`modules/`, `dev/`, `staging/`, `prod/`)
+- [ ] README.md contains only project info, requirements, and usage instructions
 - [ ] All modules have required files (`variables.tf`, `main.tf`, `outputs.tf`)
 - [ ] All environments have required files (`main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`)
 - [ ] Files use `#############################################` module separation comments

@@ -6,6 +6,7 @@
 - Repository structure: `modules/`, `dev/`, `staging/`, `prod/`
 - Module files: `variables.tf`, `main.tf`, `outputs.tf` (ALL REQUIRED)
 - Environment files: `main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf` (ALL REQUIRED)
+- README.md: Project info, requirements, and usage only (NO technical docs)
 - Comment format: `#############################################` blocks with proper structure
 - Resource naming: `"${var.name}-${var.env}-${resource_type}"`
 - Variable naming: Module prefixes (e.g., `alb_`, `ecs_`, `dynamodb_`)
@@ -72,6 +73,50 @@ modules/
 │   ├── record.tf
 │   └── outputs.tf
 ```
+
+## README.md Requirements
+
+### Repository README.md Content
+The main `README.md` file in the repository root MUST contain ONLY:
+
+- **Project Information**: Brief description of what the project does
+- **Requirements**: Prerequisites and dependencies needed
+- **Usage Instructions**: How to plan and apply the infrastructure
+
+### README.md Structure
+```markdown
+# Project Name
+
+Brief description of the project and its purpose.
+
+## Requirements
+
+- Terraform >= 1.0.4
+- AWS CLI configured
+- Appropriate AWS permissions
+
+## Usage
+
+### Plan Infrastructure
+```bash
+bin/plan dev
+bin/plan staging
+bin/plan prod
+```
+
+### Apply Infrastructure
+```bash
+bin/apply dev
+bin/apply staging
+bin/apply prod
+```
+```
+
+### README.md Rules
+- **DO NOT include**: Technical documentation, standards, or detailed architecture
+- **DO NOT include**: Module documentation or code examples
+- **DO NOT include**: Development guidelines or coding standards
+- **KEEP FOCUSED**: Only project info, requirements, and basic usage
 
 ## Environment Structure Requirements
 
@@ -392,6 +437,7 @@ tags = {
 Before committing any Terraform code, ensure:
 
 - [ ] Repository has `modules/`, `dev/`, `staging/`, `prod/` folders
+- [ ] README.md contains only project info, requirements, and usage instructions
 - [ ] Each module has `variables.tf`, `main.tf`, `outputs.tf`
 - [ ] Each environment has `main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`
 - [ ] All `.tf` files use `#############################################` comments to separate modules
