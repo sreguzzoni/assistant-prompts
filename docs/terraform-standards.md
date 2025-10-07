@@ -346,7 +346,7 @@ Use this checklist for every repository:
 - [ ] `prod/` directory exists with required files
 - [ ] `bin/` directory exists with `plan` and `apply` scripts
 - [ ] Each module has `variables.tf`, `main.tf`, `outputs.tf`
-- [ ] Each environment has `main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`, `variables.tf`, `outputs.tf`
+- [ ] Each environment has `main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`
 - [ ] All `.tf` files use module separation comments
 - [ ] Bin scripts are executable (`chmod +x bin/plan bin/apply`)
 - [ ] Code passes `terraform fmt` and `terraform validate`

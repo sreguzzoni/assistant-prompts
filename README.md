@@ -34,7 +34,7 @@ This repository provides standards and examples for Terraform infrastructure pro
 **MANDATORY PATTERNS TO ENFORCE:**
 - **Repository Structure**: `modules/`, `dev/`, `staging/`, `prod/`, `bin/`
 - **Module Files**: `variables.tf`, `main.tf`, `outputs.tf` (ALL REQUIRED)
-- **Environment Files**: `main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`, `variables.tf`, `outputs.tf` (ALL REQUIRED)
+- **Environment Files**: `main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf` (ALL REQUIRED)
 - **Comment Format**: `#############################################` for module separation
 - **Resource Naming**: `"${var.name}-${var.env}-${resource_type}"`
 - **Variable Naming**: Module prefixes (e.g., `alb_`, `ecs_`, `dynamodb_`)

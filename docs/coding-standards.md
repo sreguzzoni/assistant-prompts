@@ -5,8 +5,8 @@
 **MANDATORY PATTERNS TO ENFORCE:**
 - Repository structure: `modules/`, `dev/`, `staging/`, `prod/`, `bin/`
 - Module files: `variables.tf`, `main.tf`, `outputs.tf` (ALL REQUIRED)
-- Environment files: `main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`, `variables.tf`, `outputs.tf` (ALL REQUIRED)
-- Comment format: `#############################################` for module separation
+- Environment files: `main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf` (ALL REQUIRED)
+- Comment format: `#############################################` blocks with proper structure
 - Resource naming: `"${var.name}-${var.env}-${resource_type}"`
 - Variable naming: Module prefixes (e.g., `alb_`, `ecs_`, `dynamodb_`)
 - Locals structure: `common` + module-specific sections
@@ -56,7 +56,7 @@ modules/
 
 ## Environment Structure Requirements
 
-Each environment folder (dev, staging, prod) MUST contain these five files:
+Each environment folder (dev, staging, prod) MUST contain these files:
 
 ### Required Environment Files
 - `main.tf` - Main configuration and module calls
@@ -64,8 +64,6 @@ Each environment folder (dev, staging, prod) MUST contain these five files:
 - `provider.tf` - Provider configurations
 - `versions.tf` - Terraform and provider version constraints
 - `state.tf` - Backend configuration for state management
-- `variables.tf` - Environment variables
-- `outputs.tf` - Output values
 
 ### Environment File Structure Example
 ```
@@ -74,9 +72,7 @@ dev/
 ├── locals.tf
 ├── provider.tf
 ├── versions.tf
-├── state.tf
-├── variables.tf
-└── outputs.tf
+└── state.tf
 ```
 
 ## Terraform File Formatting Rules
@@ -88,7 +84,7 @@ Every Terraform file MUST use `#` comments to separate different modules or logi
 ```hcl
 #############################################
 # Common
-#
+# 
 variable "name" {
   description = "Name of the project"
   type        = string
@@ -102,7 +98,7 @@ variable "env" {
 
 #############################################
 # Application Load Balancer Module
-#
+# 
 variable "alb_subnet_ids" {
   description = "Subnet IDS related to the application load balancer"
   type        = list(string)
@@ -116,7 +112,7 @@ variable "alb_health_check_path" {
 
 #############################################
 # ECS Module
-#
+# 
 variable "ecs_task_cpu" {
   description = "ECS task CPU amount in milli vCPUs"
   type        = number
@@ -314,6 +310,39 @@ resource "aws_alb_target_group" "main" {
 #############################################
 ```
 
+## Locals Structure Requirements
+
+### Required Locals Structure
+All environment `locals.tf` files MUST follow this exact structure:
+
+```hcl
+locals {
+  common = {
+    name        = "project-name"
+    environment = "dev"
+    tags = {
+      account = "dev"
+    }
+  }
+
+  ecs = {
+    ecs_field = "value"
+    # ... other ecs-specific values
+  }
+
+  alb = {
+    alb_field = "value"
+    # ... other alb-specific values
+  }
+}
+```
+
+### Locals Structure Rules
+- **common**: Contains shared values across all modules
+- **Module-specific sections**: Each module gets its own section (ecs, alb, dynamodb, etc.)
+- **No environment-specific variables**: All values are defined in locals, not variables
+- **Consistent naming**: Use module prefixes for module-specific values
+
 ## Tagging Requirements
 
 ### Mandatory Tags
@@ -359,7 +388,7 @@ Before committing any Terraform code, ensure:
 - [ ] Repository has `modules/`, `dev/`, `staging/`, `prod/` folders
 - [ ] Repository has `bin/plan` and `bin/apply` scripts
 - [ ] Each module has `variables.tf`, `main.tf`, `outputs.tf`
-- [ ] Each environment has `main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`, `variables.tf`, `outputs.tf`
+- [ ] Each environment has `main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`
 - [ ] All `.tf` files use `#############################################` comments to separate modules
 - [ ] Resource names follow naming conventions
 - [ ] All files pass `terraform fmt` and `terraform validate`

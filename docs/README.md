@@ -46,8 +46,6 @@ Each environment must have:
 - ✅ `provider.tf` - Provider configuration
 - ✅ `versions.tf` - Version constraints
 - ✅ `state.tf` - Backend configuration
-- ✅ `variables.tf` - Environment variables
-- ✅ `outputs.tf` - Output values
 
 ### File Formatting Requirements
 - ✅ Use `#############################################` comments to separate modules
@@ -147,7 +145,7 @@ Before committing any Terraform code:
 - [ ] Repository has required folder structure (`modules/`, `dev/`, `staging/`, `prod/`)
 - [ ] Bin scripts exist (`bin/plan`, `bin/apply`) and are executable
 - [ ] All modules have required files (`variables.tf`, `main.tf`, `outputs.tf`)
-- [ ] All environments have required files (`main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`, `variables.tf`, `outputs.tf`)
+- [ ] All environments have required files (`main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`)
 - [ ] Files use `#############################################` module separation comments
 - [ ] Resource naming follows pattern: `"${var.name}-${var.env}-${resource_type}"`
 - [ ] Variables use proper naming (module prefixes + common variables)
