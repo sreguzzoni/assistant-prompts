@@ -58,6 +58,8 @@ Each environment must have:
 - ✅ Include proper tagging strategy
 - ✅ Resource naming pattern: `"${var.name}-${var.env}-${resource_type}"`
 - ✅ Variable naming: module prefixes + common variables
+- ✅ Module call format: source, common vars, module vars, external module vars, depends_on
+- ✅ External module references: `module.module_name.module_variable_name`
 - ✅ Locals structure: common + module-specific sections
 - ✅ Use descriptive variable names with module prefixes
 
@@ -151,6 +153,8 @@ Before committing any Terraform code:
 - [ ] All modules have required files (`variables.tf`, `main.tf`, `outputs.tf`)
 - [ ] All environments have required files (`main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`)
 - [ ] Files use `#############################################` module separation comments
+- [ ] Module calls follow proper format (source, common vars, module vars, external vars, depends_on)
+- [ ] External module references use `module.module_name.variable_name` format
 - [ ] Resource naming follows pattern: `"${var.name}-${var.env}-${resource_type}"`
 - [ ] Variables use proper naming (module prefixes + common variables)
 - [ ] Locals structure follows common + module-specific format

@@ -8,8 +8,10 @@
 - Environment files: `main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf` (ALL REQUIRED)
 - README.md: Project info, requirements, and usage only (NO technical docs)
 - Comment format: `#############################################` blocks with proper structure
+- Module call format: source, common vars, module vars, external module vars, depends_on
 - Resource naming: `"${var.name}-${var.env}-${resource_type}"`
 - Variable naming: Module prefixes (e.g., `alb_`, `ecs_`, `dynamodb_`)
+- External module references: `module.module_name.module_variable_name`
 - Locals structure: `common` + module-specific sections
 - Minimum tags: `Name`, `Environment`, `Project`
 
@@ -374,6 +376,80 @@ resource "aws_alb_target_group" "main" {
 #############################################
 ```
 
+## Module Call Format Requirements
+
+### Module Call Structure
+When creating module calls in `main.tf`, follow this EXACT format:
+
+```hcl
+#############################################
+# Module Name
+#
+module "module_name" {
+  source = "./module_name"
+
+  # Common variables (no prefix)
+  name                = var.name
+  env                 = var.env
+  aws_region          = var.aws_region
+  vpc_id              = var.vpc_id
+
+  # Module-specific variables (with module prefix)
+  module_field_1      = var.module_field_1
+  module_field_2      = var.module_field_2
+  module_field_3      = var.module_field_3
+
+  # Variables from other modules (module.module_name.module_variable_name)
+  external_var_1      = module.other_module.other_module_variable_name
+  external_var_2      = module.other_module.other_module_variable_name
+
+  depends_on = [module.other_module]
+}
+#############################################
+```
+
+### Module Call Rules
+1. **Source**: Always `source = "./module_name"`
+2. **Common variables**: No prefix (name, env, aws_region, vpc_id)
+3. **Module-specific variables**: Use module prefix (ecs_task_cpu, alb_health_check_path)
+4. **External module variables**: Use `module.module_name.variable_name` format
+5. **Depends_on**: List modules this module depends on
+
+### Variable Naming Convention
+- **Module variables**: `module_prefix_variable_name` (e.g., `ecs_task_cpu`)
+- **External module references**: `module.module_name.module_prefix_variable_name` (e.g., `module.alb.alb_ecs_target_group_arn`)
+
+### Example Module Call
+```hcl
+#############################################
+# ECS Module
+#
+module "ecs" {
+  source = "./ecs"
+
+  name                = var.name
+  env                 = var.env
+  aws_region          = var.aws_region
+  vpc_id              = var.vpc_id
+
+  ecs_subnet_ids          = var.ecs_subnet_ids
+  ecs_task_cpu        = var.ecs_task_cpu
+  ecs_task_memory     = var.ecs_task_memory
+  ecs_task_container_definitions = var.ecs_task_container_definitions
+  ecs_desired_capacity = var.ecs_desired_capacity
+  ecs_max_capacity    = var.ecs_max_capacity
+  ecs_min_capacity    = var.ecs_min_capacity
+  ecs_task_log_group_region = var.ecs_task_log_group_region
+  ecs_task_log_group_name   = var.ecs_task_log_group_name
+
+  ecs_target_group_arn      = module.alb.alb_ecs_target_group_arn
+  ecs_security_group_id     = module.alb.alb_ecs_security_group_id
+
+  depends_on = [module.alb]
+}
+#############################################
+```
+
 ## Locals Structure Requirements
 
 ### Required Locals Structure
@@ -441,5 +517,7 @@ Before committing any Terraform code, ensure:
 - [ ] Each module has `variables.tf`, `main.tf`, `outputs.tf`
 - [ ] Each environment has `main.tf`, `locals.tf`, `provider.tf`, `versions.tf`, `state.tf`
 - [ ] All `.tf` files use `#############################################` comments to separate modules
+- [ ] Module calls follow proper format (source, common vars, module vars, external vars, depends_on)
+- [ ] External module references use `module.module_name.variable_name` format
 - [ ] Resource names follow naming conventions
 - [ ] All files pass `terraform fmt` and `terraform validate`
